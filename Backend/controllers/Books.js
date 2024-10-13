@@ -27,12 +27,6 @@ exports.getOneBook = (req, res, next) => {
       .catch(error => res.status(404).json({ error }));
 }
 
-exports.getBestRatings = (req, res, next) => {
-    Book.find({ rating: { $gte: 4 } }) // on utilise l'opérateur $gte (greater than or equal) pour trouver les livres avec une note supérieure ou égale à 4
-      .then(books => res.status(200).json(books))
-      .catch(error => res.status(400).json({ error }));
-}
-
 exports.modifyBook = (req, res, next) => {
     const bookObject = req.file ? { // on utilise un opérateur ternaire pour déterminer si la requête contient un fichier ou non
       ...JSON.parse(req.body.book),
@@ -69,3 +63,54 @@ exports.deleteBook = (req, res, next) => {
     })
     .catch(error => res.status(500).json({ error }));
 }
+
+// ajouter la fonctionnalité de notation des livres
+exports.rateBook = (req, res, next) => {
+  // Vérification que la note est comprise entre 0 et 5
+  if (req.body.rating >= 0 && req.body.rating <= 5) {
+    const ratingObject = { userId: req.auth.userId, grade: req.body.rating }; // Création de l'objet note
+    // Récupération du livre par son ID
+    Book.findOne({ _id: req.params.id })
+      .then((book) => {
+        if (!book) {
+          return res.status(404).json({ message: 'Livre non trouvé' });
+        }
+
+        // Création d'un tableau contenant tous les userId ayant déjà noté ce livre
+        const userIdArray = book.ratings.map((rating) => rating.userId);
+
+        // Vérifier que l'utilisateur authentifié n'a pas déjà noté
+        if (userIdArray.includes(req.auth.userId)) {
+          return res.status(403).json({ message: 'Not authorized: Vous avez déjà noté ce livre.' });
+        }
+
+        // Ajout de la nouvelle note de l'utilisateur au tableau des notes du livre
+        book.ratings.push(ratingObject);
+
+        // Recalcule de la moyenne des notes
+        const grades = book.ratings.map((rating) => rating.grade); // Création d'un tableau contenant toutes les notes
+        const averageGrades = grades.reduce((sum, grade) => sum + grade, 0) / grades.length; 
+
+        // Mise à jour de la moyenne des notes
+        book.averageRating = averageGrades;
+
+        // Sauvegarde des changements (nouvelle note et moyenne mise à jour)
+        book.save()
+          .then(() => res.status(201).json(book))
+          .catch((error) => res.status(400).json({ error }));
+      })
+      .catch((error) => res.status(500).json({ error }));
+  } else {
+    // Si la note n'est pas comprise entre 0 et 5
+    res.status(400).json({ message: 'La note doit être comprise entre 0 et 5' });
+  }
+};
+
+
+exports.getBestRating = (req, res, next) => {
+    // Récupération de tous les livres
+    Book.find().sort({averageRating: -1}).limit(3)   // Puis tri par rapport aux moyennes dans l'ordre décroissant, limitation du tableau aux 3 premiers éléments
+        .then((books)=>res.status(200).json(books))
+        .catch((error)=>res.status(404).json({ error }));
+};
+
