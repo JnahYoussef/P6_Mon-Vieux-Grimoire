@@ -7,7 +7,7 @@ module.exports = (req, res, next) => {
     if (req.file) {
         const originalPath = req.file.path;
         const fileBaseName = path.basename(req.file.filename, path.extname(req.file.filename)); // Nom de fichier sans extension
-        const newFileName = fileBaseName + '-' + Date.now() + '.webp'; // Nouveau nom avec horodatage
+        const newFileName = fileBaseName + '.webp'; // Nouveau nom de fichier avec extension WebP
         const newFilePath = path.join('images', newFileName); // Chemin complet du fichier compressé
 
         // Redimensionner et convertir l'image en WebP

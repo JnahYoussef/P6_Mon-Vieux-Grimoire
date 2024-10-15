@@ -30,18 +30,23 @@ exports.getOneBook = (req, res, next) => {
 exports.modifyBook = (req, res, next) => {
     const bookObject = req.file ? { // on utilise un opérateur ternaire pour déterminer si la requête contient un fichier ou non
       ...JSON.parse(req.body.book),
-      imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}`
+      imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}` // on utilise l'objet req.protocol pour obtenir le protocole (http ou https), et l'objet req.get("host") pour obtenir le nom de l'hôte du serveur, puis on ajoute /images/ et le nom du fichier pour construire l'URL complète de l'image
     } : { ...req.body };
 
-    delete bookObject._userId;
+    delete bookObject._userId; 
     Book.findOne({ _id: req.params.id })
       .then((book) => {
         if (book.userId != req.auth.userId) {
           res.status(401).json({ error: 'Utilisateur non autorisé !' });
         } else {
-          Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
-            .then(() => res.status(200).json({ message: 'Livre modifié !'}))
-            .catch(error => res.status(401).json({ error }));
+          //supprimer l'ancienne image
+          const filename = book.imageUrl.split('/images/')[1]; // on utilise la méthode split() pour récupérer le nom du fichier seulement
+          fs.unlink(`images/${filename}`, () => { // on utilise la fonction unlink du package fs pour supprimer le fichier, on lui passe le chemin du fichier à supprimer et une fonction callback
+            Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
+              .then(() => res.status(200).json({ message: 'Livre modifié !'}))
+              .catch(error => res.status(401).json({ error }));
+          }
+          );
         }
       })
       .catch(error => res.status(400).json({ error }));
@@ -89,7 +94,7 @@ exports.rateBook = (req, res, next) => {
 
         // Recalcule de la moyenne des notes
         const grades = book.ratings.map((rating) => rating.grade); // Création d'un tableau contenant toutes les notes
-        const averageGrades = grades.reduce((sum, grade) => sum + grade, 0) / grades.length; 
+        const averageGrades = grades.reduce((sum, grade) => sum + grade, 0) / grades.length;
 
         // Mise à jour de la moyenne des notes
         book.averageRating = averageGrades;
