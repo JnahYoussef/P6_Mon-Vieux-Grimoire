@@ -10,6 +10,8 @@ module.exports = (req, res, next) => {
         const newFileName = fileBaseName + '.webp'; // Nouveau nom de fichier avec extension WebP
         const newFilePath = path.join('images', newFileName); // Chemin complet du fichier compressé
 
+        sharp.cache(false); // Désactiver le cache pour éviter les problèmes de mémoire
+
         // Redimensionner et convertir l'image en WebP
         sharp(originalPath)
             .resize(500)

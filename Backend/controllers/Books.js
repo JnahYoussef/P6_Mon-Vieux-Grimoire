@@ -28,29 +28,42 @@ exports.getOneBook = (req, res, next) => {
 }
 
 exports.modifyBook = (req, res, next) => {
-    const bookObject = req.file ? { // on utilise un opérateur ternaire pour déterminer si la requête contient un fichier ou non
-      ...JSON.parse(req.body.book),
-      imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}` // on utilise l'objet req.protocol pour obtenir le protocole (http ou https), et l'objet req.get("host") pour obtenir le nom de l'hôte du serveur, puis on ajoute /images/ et le nom du fichier pour construire l'URL complète de l'image
-    } : { ...req.body };
+    const bookObject = req.file ? { 
+        // Si un fichier est présent, on met à jour l'objet book avec la nouvelle image
+        ...JSON.parse(req.body.book),
+        imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}` 
+    } : { 
+        // Sinon, on garde les données actuelles sans changer l'image
+        ...req.body 
+    };
 
-    delete bookObject._userId; 
+    delete bookObject._userId;
+  
     Book.findOne({ _id: req.params.id })
-      .then((book) => {
-        if (book.userId != req.auth.userId) {
-          res.status(401).json({ error: 'Utilisateur non autorisé !' });
-        } else {
-          //supprimer l'ancienne image
-          const filename = book.imageUrl.split('/images/')[1]; // on utilise la méthode split() pour récupérer le nom du fichier seulement
-          fs.unlink(`images/${filename}`, () => { // on utilise la fonction unlink du package fs pour supprimer le fichier, on lui passe le chemin du fichier à supprimer et une fonction callback
-            Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
-              .then(() => res.status(200).json({ message: 'Livre modifié !'}))
-              .catch(error => res.status(401).json({ error }));
-          }
-          );
-        }
-      })
-      .catch(error => res.status(400).json({ error }));
-}
+        .then((book) => {
+            if (book.userId != req.auth.userId) {
+                res.status(401).json({ error: 'Utilisateur non autorisé !' });
+            } else {
+                // Si une nouvelle image est présente dans la requête, on supprime l'ancienne
+                if (req.file) {
+                    const filename = book.imageUrl.split('/images/')[1]; 
+                    fs.unlink(`images/${filename}`, () => { 
+                        // Mise à jour du livre avec la nouvelle image
+                        Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
+                            .then(() => res.status(200).json({ message: 'Livre modifié avec une nouvelle image !' }))
+                            .catch(error => res.status(401).json({ error }));
+                    });
+                } else {
+                    // Si aucune nouvelle image n'est présente, on met à jour le reste des informations sans toucher à l'image
+                    Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
+                        .then(() => res.status(200).json({ message: 'Livre modifié sans changement d\'image !' }))
+                        .catch(error => res.status(401).json({ error }));
+                }
+            }
+        })
+        .catch(error => res.status(400).json({ error }));
+};
+
 
 exports.deleteBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id })
