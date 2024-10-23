@@ -4,6 +4,8 @@
         "es2021": true
     },
     "extends": [
+        "react-app",
+        "airbnb/hooks",
         "plugin:react/recommended",
         "airbnb"
     ],
@@ -17,6 +19,8 @@
         "react"
     ],
     "rules": {
-        "linebreak-style": ["error", "unix"]
+        "linebreak-style": ["error", "unix"],
+        "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx"] }],
+        "react/jsx-props-no-spreading": "off",
     }
 }

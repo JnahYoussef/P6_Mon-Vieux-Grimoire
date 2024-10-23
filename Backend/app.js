@@ -3,12 +3,16 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const path = require('path');
 
+require('dotenv').config();
 
 const bookRoutes = require('./routes/Books');
 const userRoutes = require('./routes/User');
 
 // Connexion à la base de données MongoDB
-mongoose.connect('mongodb+srv://youssef:8B3yNpmXKaRYLFru@cluster0.47go9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0') 
+const mongodb_password = process.env.MONGODB_PASSWORD;
+const mongodb_username = process.env.MONGODB_USERNAME;
+
+mongoose.connect(`mongodb+srv://${mongodb_username}:${mongodb_password}@cluster0.47go9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`)
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch(() => console.log('Connexion à MongoDB échouée !'));
 
